@@ -10,6 +10,7 @@ android {
     namespace = "com.example.medicloud"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+    ndkVersion = "25.1.8937393"
 
     java {
     toolchain {

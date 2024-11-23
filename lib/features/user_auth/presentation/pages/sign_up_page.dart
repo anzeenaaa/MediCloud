@@ -131,6 +131,7 @@ setState(() {
   isSigningUp = true;
 });
 
+    // ignore: unused_local_variable
     String username = _usernameController.text;
     String email = _emailController.text;
     String password = _passwordController.text;
