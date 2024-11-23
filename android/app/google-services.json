@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "519283398729",
+    "project_id": "fire-medicloud",
+    "storage_bucket": "fire-medicloud.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:519283398729:android:e1f52ed87bbfdc616ec798",
+        "android_client_info": {
+          "package_name": "com.example.medicloud"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDRQkb68iGRSplluxP3DzUgb85Pdycll2I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
