@@ -1,13 +1,8 @@
-//import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:medicloud/features/user_auth/presentation/pages/sign_up_page.dart';
 import 'package:medicloud/features/user_auth/presentation/widgets/form_container_widget.dart';
 import 'package:medicloud/global/common/toast.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-
 import '../../firebase_auth_implementation/firebase_auth_services.dart';
 
 class LoginPage extends StatefulWidget {
@@ -20,9 +15,12 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   bool _isSigning = false;
   final FirebaseAuthService _auth = FirebaseAuthService();
-  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
-  TextEditingController _emailController = TextEditingController();
-  TextEditingController _passwordController = TextEditingController();
+
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  // Toggle to switch between Doctor and Patient
+  bool isDoctor = false;
 
   @override
   void dispose() {
@@ -48,28 +46,59 @@ class _LoginPageState extends State<LoginPage> {
                 "Login",
                 style: TextStyle(fontSize: 27, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(
-                height: 30,
+              const SizedBox(height: 20),
+
+              // Toggle for selecting Doctor/Patient
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        isDoctor = false;
+                      });
+                    },
+                    style: TextButton.styleFrom(
+                      backgroundColor: isDoctor ? Colors.grey[300] : Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text("Patient"),
+                  ),
+                  const SizedBox(width: 10),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        isDoctor = true;
+                      });
+                    },
+                    style: TextButton.styleFrom(
+                      backgroundColor: isDoctor ? Colors.blue : Colors.grey[300],
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text("Doctor"),
+                  ),
+                ],
               ),
+              const SizedBox(height: 20),
+
+              // Email and Password Input
               FormContainerWidget(
                 controller: _emailController,
                 hintText: "Email",
                 isPasswordField: false,
               ),
-              const SizedBox(
-                height: 10,
-              ),
+              const SizedBox(height: 10),
               FormContainerWidget(
                 controller: _passwordController,
                 hintText: "Password",
                 isPasswordField: true,
               ),
-              const SizedBox(
-                height: 30,
-              ),
+              const SizedBox(height: 30),
+
+              // Sign in button
               GestureDetector(
                 onTap: () {
-                  _signIn();
+                  _signIn(context); // Pass context explicitly
                 },
                 child: Container(
                   width: double.infinity,
@@ -79,67 +108,34 @@ class _LoginPageState extends State<LoginPage> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Center(
-                    child: _isSigning ? const CircularProgressIndicator(
-                      color: Colors.white,) : const Text(
-                      "Login",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10,),
-              GestureDetector(
-                onTap: () {
-                  _signInWithGoogle();
-
-                },
-                child: Container(
-                  width: double.infinity,
-                  height: 45,
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(FontAwesomeIcons.google, color: Colors.white,),
-                        SizedBox(width: 5,),
-                        Text(
-                          "Sign in with Google",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                    child: _isSigning
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            "Login",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
                   ),
                 ),
               ),
+              const SizedBox(height: 10),
 
-
-              const SizedBox(
-                height: 20,
-              ),
-
+              // Sign up navigation
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text("Don't have an account?"),
-                  const SizedBox(
-                    width: 5,
-                  ),
+                  const SizedBox(width: 5),
                   GestureDetector(
                     onTap: () {
                       Navigator.pushAndRemoveUntil(
                         context,
-                        MaterialPageRoute(builder: (context) => const SignUpPage()),
-                            (route) => false,
+                        MaterialPageRoute(
+                          builder: (context) => SignUpPage(isDoctor: isDoctor),
+                        ),
+                        (route) => false,
                       );
                     },
                     child: const Text(
@@ -159,56 +155,49 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  void _signIn() async {
+  // Sign in method using email and password
+  void _signIn(BuildContext context) async {
     setState(() {
       _isSigning = true;
     });
 
-    String email = _emailController.text;
-    String password = _passwordController.text;
-
-    User? user = await _auth.signInWithEmailAndPassword(email, password);
-
-    setState(() {
-      _isSigning = false;
-    });
-
-    if (user != null) {
-      showToast(message: "User is successfully signed in");
-      Navigator.pushNamed(context, "/home");
-    } else {
-      showToast(message: "some error occured");
-    }
-  }
-
-
-  _signInWithGoogle()async{
-
-    final GoogleSignIn _googleSignIn = GoogleSignIn();
+    String email = _emailController.text.trim();
+    String password = _passwordController.text.trim();
 
     try {
+      User? user = await _auth.signInWithEmailAndPassword(email, password);
 
-      final GoogleSignInAccount? googleSignInAccount = await _googleSignIn.signIn();
+      if (!mounted) return;  // Ensure the widget is still in the tree before updating state
 
-      if(googleSignInAccount != null ){
-        final GoogleSignInAuthentication googleSignInAuthentication = await
-        googleSignInAccount.authentication;
+      setState(() {
+        _isSigning = false;
+      });
 
-        final AuthCredential credential = GoogleAuthProvider.credential(
-          idToken: googleSignInAuthentication.idToken,
-          accessToken: googleSignInAuthentication.accessToken,
-        );
+      if (user != null) {
+        // Show success message and navigate based on the role
+        showToast(message: "Login successful");
 
-        await _firebaseAuth.signInWithCredential(credential);
-        Navigator.pushNamed(context, "/home");
+        if (mounted) {
+          // Safe to use Navigator here since we're checking if the widget is mounted
+          Navigator.pushNamed(
+            // ignore: use_build_context_synchronously
+            context,
+            isDoctor ? "/doctorHome" : "/patientHome",
+          );
+        }
+      } else {
+        // Handle case where login fails
+        if (mounted) {
+          showToast(message: "Login failed");
+        }
       }
-
-    }catch(e) {
-showToast(message: "some error occured $e");
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSigning = false;
+        });
+        showToast(message: "Login failed: ${e.toString()}");
+      }
     }
-
-
   }
-
-
 }
