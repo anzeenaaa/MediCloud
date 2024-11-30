@@ -4,11 +4,12 @@ import 'package:flutter/material.dart';
 // ignore: unused_import
 import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Auth
 import 'package:medicloud/features/app/splash_screen/splash_screen.dart';
-import 'package:medicloud/features/user_auth/presentation/pages/home_page.dart';
+import 'package:medicloud/features/user_auth/presentation/pages/doctor_home_page.dart';
+import 'package:medicloud/features/user_auth/presentation/pages/patient_home_page.dart';
 import 'package:medicloud/features/user_auth/presentation/pages/login_page.dart';
 import 'package:medicloud/features/user_auth/presentation/pages/sign_up_page.dart';
 
-Future main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (kIsWeb) {
     await Firebase.initializeApp(
@@ -27,20 +28,24 @@ Future main() async {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Flutter Firebase',
+      title: 'MediCloud',
+      initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(
-          // Here, you can decide whether to show the LoginPage or HomePage based on user authentication
-          child: LoginPage(),
-        ),
+              // Decides whether to show LoginPage or HomePage based on user authentication
+              child: LoginPage(),
+            ),
         '/login': (context) => const LoginPage(),
-        '/signUp': (context) => const SignUpPage(),
-        '/home': (context) => const HomePage(),
+        '/signUpPatient': (context) => const SignUpPage(isDoctor: false),
+        '/signUpDoctor': (context) => const SignUpPage(isDoctor: true),
+        '/patientHome': (context) => pat_HomePage(),
+        '/doctorHome': (context) => doc_HomePage(),
       },
     );
   }

@@ -1,23 +1,28 @@
+// ignore: unused_import
+import 'dart:ffi';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 // ignore: unused_import
 import 'package:fluttertoast/fluttertoast.dart';
 
 import '../../../../global/common/toast.dart';
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+class doc_HomePage extends StatefulWidget {
+  const doc_HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<doc_HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<doc_HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
           automaticallyImplyLeading: false,
-          title: const Text("HomePage"),
+          title: const Text("Doctor HomePage"),
         ),
         body: Center(
           child: Column(
