@@ -45,7 +45,7 @@ class MyApp extends StatelessWidget {
         '/signUpPatient': (context) => const SignUpPage(isDoctor: false),
         '/signUpDoctor': (context) => const SignUpPage(isDoctor: true),
         '/patientHome': (context) => pat_HomePage(),
-        '/doctorHome': (context) => doc_HomePage(),
+        '/doctorHome': (context) => DoctorHomePage(),
       },
     );
   }

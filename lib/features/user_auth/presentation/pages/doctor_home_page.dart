@@ -1,195 +1,144 @@
-// ignore: unused_import
-import 'dart:ffi';
-
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-// ignore: unused_import
-import 'package:fluttertoast/fluttertoast.dart';
 
-import '../../../../global/common/toast.dart';
-
-class doc_HomePage extends StatefulWidget {
-  const doc_HomePage({super.key});
-
-  @override
-  State<doc_HomePage> createState() => _HomePageState();
+void main() {
+  runApp(MyApp());
 }
 
-class _HomePageState extends State<doc_HomePage> {
+class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          title: const Text("Doctor HomePage"),
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              GestureDetector(
-                onTap: () {
-                  _createData(UserModel(
-                    username: "Henry",
-                    age: 21,
-                    adress: "London",
-                  ));
-                },
-                child: Container(
-                  height: 45,
-                  width: 100,
-                  decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.circular(10)),
-                  child: const Center(
-                    child: Text(
-                      "Create Data",
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              StreamBuilder<List<UserModel>>(
-                stream: _readData(),
-                builder: (context, snapshot) {
-                  if(snapshot.connectionState == ConnectionState.waiting){
-                    return const Center(child: CircularProgressIndicator(),);
-                  } if(snapshot.data!.isEmpty){
-                    return const Center(child:Text("No Data Yet"));
-                  }
-                  final users = snapshot.data;
-                  return Padding(padding: const EdgeInsets.all(8),
-                  child: Column(
-                    children: users!.map((user) {
-                      return ListTile(
-                        leading: GestureDetector(
-                          onTap: (){
-                            _deleteData(user.id!);
-                          },
-                          child: const Icon(Icons.delete),
-                        ),
-                        trailing: GestureDetector(
-                          onTap: (){
-                            _updateData(
-                              UserModel(
-                                id: user.id,
-                                username: "John Wick",
-                                adress: "Pakistan",)
-                            );
-                          },
-                          child: const Icon(Icons.update),
-                        ),
-                        title: Text(user.username!),
-                        subtitle: Text(user.adress!),
-                      );
-                    }).toList()
-                  ),);
-                }
-              ),
-
-              GestureDetector(
-                onTap: () {
-                  FirebaseAuth.instance.signOut();
-                  Navigator.pushNamed(context, "/login");
-                  showToast(message: "Successfully signed out");
-                },
-                child: Container(
-                  height: 45,
-                  width: 100,
-                  decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.circular(10)),
-                  child: const Center(
-                    child: Text(
-                      "Sign out",
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18),
-                    ),
-                  ),
-                ),
-              )
-            ],
-          ),
-        ));
+    return MaterialApp(
+      title: 'Doctor Dashboard',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+      ),
+      home: DoctorHomePage(),
+    );
   }
-
-  Stream<List<UserModel>> _readData(){
-    final userCollection = FirebaseFirestore.instance.collection("users");
-
-    return userCollection.snapshots().map((qureySnapshot)
-    => qureySnapshot.docs.map((e)
-    => UserModel.fromSnapshot(e),).toList());
-  }
-
-  void _createData(UserModel userModel) {
-    final userCollection = FirebaseFirestore.instance.collection("users");
-
-    String id = userCollection.doc().id;
-
-    final newUser = UserModel(
-      username: userModel.username,
-      age: userModel.age,
-      adress: userModel.adress,
-        id: id,
-    ).toJson();
-
-    userCollection.doc(id).set(newUser);
-  }
-
-  void _updateData(UserModel userModel) {
-    final userCollection = FirebaseFirestore.instance.collection("users");
-
-    final newData = UserModel(
-      username: userModel.username,
-      id: userModel.id,
-      adress: userModel.adress,
-      age: userModel.age,
-    ).toJson();
-
-    userCollection.doc(userModel.id).update(newData);
-
-  }
-
-  void _deleteData(String id) {
-    final userCollection = FirebaseFirestore.instance.collection("users");
-
-    userCollection.doc(id).delete();
-
-  }
-
 }
 
-class UserModel{
-  final String? username;
-  final String? adress;
-  final int? age;
-  final String? id;
+class DoctorHomePage extends StatefulWidget {
+  @override
+  _DoctorHomePageState createState() => _DoctorHomePageState();
+}
 
-  UserModel({this.id,this.username, this.adress, this.age});
+class _DoctorHomePageState extends State<DoctorHomePage> {
+  // Sample list of recent patients
+  final List<Map<String, String>> _recentPatients = [
+    {"name": "John Doe", "id": "P001"},
+    {"name": "Jane Smith", "id": "P002"},
+    {"name": "Michael Johnson", "id": "P003"},
+    {"name": "Emily Davis", "id": "P004"},
+  ];
 
+  // Search query to filter patients
+  String _searchQuery = '';
 
-  static UserModel fromSnapshot(DocumentSnapshot<Map<String, dynamic>> snapshot){
-    return UserModel(
-      username: snapshot['username'],
-      adress: snapshot['adress'],
-      age: snapshot['age'],
-      id: snapshot['id'],
+  // Profile info
+  String _doctorName = 'Dr. Sarah Lee';
+  String _specialization = 'Cardiologist';
+  String _email = 'sarah.lee@example.com';
+
+  // Controller for the search bar
+  TextEditingController _searchController = TextEditingController();
+
+  // Show profile details
+  void _showProfileDetails() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Profile Details'),
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Name: $_doctorName'),
+            Text('Specialization: $_specialization'),
+            Text('Email: $_email'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              // Logout action (close the dialog)
+              Navigator.pop(context);
+            },
+            child: Text('Logout'),
+          ),
+        ],
+      ),
     );
   }
 
-  Map<String, dynamic> toJson(){
-    return {
-      "username": username,
-      "age": age,
-      "id": id,
-      "adress": adress,
-    };
+  // Filter patients based on the search query
+  List<Map<String, String>> _getFilteredPatients() {
+    if (_searchQuery.isEmpty) {
+      return _recentPatients;
+    } else {
+      return _recentPatients
+          .where((patient) =>
+              patient['name']!.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              patient['id']!.toLowerCase().contains(_searchQuery.toLowerCase()))
+          .toList();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Doctor Dashboard'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.account_circle),
+            onPressed: _showProfileDetails,
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Search Bar
+            TextField(
+              controller: _searchController,
+              onChanged: (query) {
+                setState(() {
+                  _searchQuery = query;
+                });
+              },
+              decoration: InputDecoration(
+                labelText: 'Search Patients',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 16),
+            // Recent Consulted Patients List
+            Text(
+              'Recent Consulted Patients',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 10),
+            // Patients List (Table View)
+            Expanded(
+              child: ListView(
+                children: _getFilteredPatients().map((patient) {
+                  return Card(
+                    margin: EdgeInsets.symmetric(vertical: 5),
+                    child: ListTile(
+                      title: Text(patient['name']!),
+                      subtitle: Text('ID: ${patient['id']}'),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
