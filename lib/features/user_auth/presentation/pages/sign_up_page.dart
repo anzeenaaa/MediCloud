@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:medicloud/features/user_auth/firebase_auth_implementation/firebase_auth_services.dart';
 import 'package:medicloud/features/user_auth/presentation/pages/login_page.dart';
 import 'package:medicloud/features/user_auth/presentation/widgets/form_container_widget.dart';
-import 'package:medicloud/global/common/toast.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class SignUpPage extends StatefulWidget {
   final bool isDoctor;
@@ -237,4 +237,16 @@ class _SignUpPageState extends State<SignUpPage> {
       showToast(message: "Some error occurred: ${e.toString()}");
     }
   }
+}
+
+void showToast({required String message}) {
+  Fluttertoast.showToast(
+    msg: message,
+    toastLength: Toast.LENGTH_SHORT,
+    gravity: ToastGravity.BOTTOM,
+    timeInSecForIosWeb: 1,
+    backgroundColor: Colors.black,
+    textColor: Colors.white,
+    fontSize: 16.0,
+  );
 }

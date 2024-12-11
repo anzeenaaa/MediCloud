@@ -1,8 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:medicloud/features/user_auth/presentation/pages/sign_up_page.dart';
+import 'package:medicloud/features/user_auth/presentation/pages/sign_up_page.dart'; // No prefix
 import 'package:medicloud/features/user_auth/presentation/widgets/form_container_widget.dart';
-import 'package:medicloud/global/common/toast.dart';
+import 'package:medicloud/global/common/toast.dart' as toast;  // Prefix for 'toast.dart'
+
 import '../../firebase_auth_implementation/firebase_auth_services.dart';
 
 class LoginPage extends StatefulWidget {
@@ -19,7 +20,6 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  // Toggle to switch between Doctor and Patient
   bool isDoctor = false;
 
   @override
@@ -175,12 +175,13 @@ class _LoginPageState extends State<LoginPage> {
 
       if (user != null) {
         // Show success message and navigate based on the role
-        showToast(message: "Login successful");
+        toast.showToast(
+          message: "Login successful",  // The actual message to display in the toast
+          duration: Duration(seconds: 2),  // Duration for how long the toast will show
+        );
 
         if (mounted) {
-          // Safe to use Navigator here since we're checking if the widget is mounted
           Navigator.pushNamed(
-            // ignore: use_build_context_synchronously
             context,
             isDoctor ? "/doctorHome" : "/patientHome",
           );
@@ -188,7 +189,10 @@ class _LoginPageState extends State<LoginPage> {
       } else {
         // Handle case where login fails
         if (mounted) {
-          showToast(message: "Login failed");
+          toast.showToast(
+            message: "Login failed", 
+            duration: Duration(seconds: 2),
+          );
         }
       }
     } catch (e) {
@@ -196,7 +200,10 @@ class _LoginPageState extends State<LoginPage> {
         setState(() {
           _isSigning = false;
         });
-        showToast(message: "Login failed: ${e.toString()}");
+        toast.showToast(
+          message: "Login failed: ${e.toString()}",
+          duration: Duration(seconds: 2),
+        );
       }
     }
   }
