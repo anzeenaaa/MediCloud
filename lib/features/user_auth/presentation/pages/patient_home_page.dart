@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:logger/logger.dart';
+//import 'package:medicloud/features/user_auth/presentation/pages/login_page.dart';
+
 
 void main() {
   runApp(MyApp());
@@ -129,60 +131,97 @@ class _HomePageState extends State<PatHomePage> {
     );
   }
 
-  Widget _buildProfileSection() {
-    return Container(
-      color: const Color.fromARGB(255, 250, 250, 251),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircleAvatar(
-              radius: 50,
-              backgroundImage: AssetImage('assets/profile.jpg'),
+  Widget _buildProfileSection(BuildContext context) {
+  return Container(
+    color: const Color.fromARGB(255, 250, 250, 251),
+    child: Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const CircleAvatar(
+            radius: 50,
+            backgroundImage: AssetImage('assets/profile.jpg'),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'John Doe',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
             ),
-            const SizedBox(height: 20),
-            const Text(
-              'John Doe',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'johndoe@example.com',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.black54,
             ),
-            const SizedBox(height: 10),
-            const Text(
-              'johndoe@example.com',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.black54,
-              ),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Phone: +1 234 567 8901',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.black54,
             ),
-            const SizedBox(height: 10),
-            const Text(
-              'Phone: +1 234 567 8901',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.black54,
-              ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () => logger.i('Edit Profile button pressed'),
+            child: const Text('Edit Profile'),
+          ),
+          const SizedBox(height: 10), // Add spacing between buttons
+        ElevatedButton(
+  onPressed: () {
+    // Show confirmation dialog
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Logout'),
+          content: const Text('Are you sure you want to log out?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: const Text('No'),
             ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => logger.i('Edit Profile button pressed'),
-              child: const Text('Edit Profile'),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+                Navigator.pushReplacementNamed(context, '/login'); // Navigate to login page
+              },
+              child: const Text('Yes'),
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
-  }
+  },
+  style: ElevatedButton.styleFrom(
+    backgroundColor: Colors.redAccent, // Optional: Make the button red
+  ),
+  child: const Text('Log Out'),
+),
+
+        ],
+      ),
+    ),
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+     return Scaffold(
       appBar: AppBar(
         title: const Text('MEDICLOUD'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
+        automaticallyImplyLeading: false,
       ),
       body: Column(
         children: [
@@ -262,7 +301,7 @@ class _HomePageState extends State<PatHomePage> {
                       const SizedBox(height: 10),
                       TextField(
                         controller: _symptomController,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           hintText: 'Describe your symptoms...',
                           border: OutlineInputBorder(),
                           filled: true,
@@ -289,7 +328,7 @@ class _HomePageState extends State<PatHomePage> {
                     ],
                   ),
                 ),
-                _buildProfileSection(),
+                _buildProfileSection(context),
               ],
             ),
           ),
