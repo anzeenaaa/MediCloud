@@ -4,7 +4,8 @@ import 'dart:io';
 
 // API Base URL - Replace with your actual backend IP and port
 const String baseUrl = "http://192.168.127.233:8000"; // Replace with your computer's IP
-const String apiKey = "YMSFYX4YHAfcNJ-k_ZjE89trqrG5Ayv9CuQRNCFwRZg"; // Replace with your FastAPI secret key
+const String apiKey = "YmrKZ_uI47aTP5OuwlZTiZPF3MpR3G-TeSg4XP_GfNQ"; // Replace with your actual API key
+ 
 
 // Function to predict disease from text symptoms
 Future<String> predictDisease(String symptoms) async {

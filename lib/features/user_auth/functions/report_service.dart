@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 
 class ReportService {
   static const String baseUrl = "http://192.168.127.233:8000"; // Replace with your backend URL
-  static const String apiKey = "YMSFYX4YHAfcNJ-k_ZjE89trqrG5Ayv9CuQRNCFwRZg"; // Replace with your actual API key
+  static const String apiKey = "YmrKZ_uI47aTP5OuwlZTiZPF3MpR3G-TeSg4XP_GfNQ"; // Replace with your actual API key
 
   static Future<String?> generateReport(
       String symptomPrediction, Map<String, dynamic> xrayPrediction) async {
