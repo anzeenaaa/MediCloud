@@ -1,22 +1,6 @@
 import 'package:flutter/material.dart';
-
-void main() {
-  runApp(MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Doctor Dashboard',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: DoctorHomePage(),
-    );
-  }
-}
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class DoctorHomePage extends StatefulWidget {
   @override
@@ -24,63 +8,62 @@ class DoctorHomePage extends StatefulWidget {
 }
 
 class _DoctorHomePageState extends State<DoctorHomePage> {
-  // Sample list of recent patients
-  final List<Map<String, String>> _recentPatients = [
-    {"name": "John Doe", "id": "P001"},
-    {"name": "Jane Smith", "id": "P002"},
-    {"name": "Michael Johnson", "id": "P003"},
-    {"name": "Emily Davis", "id": "P004"},
-  ];
+  final TextEditingController _searchController = TextEditingController();
+  Map<String, dynamic>? _patientData;
 
-  // Search query to filter patients
-  String _searchQuery = '';
+  Future<void> _searchPatient() async {
+    final uniqueId = _searchController.text.trim();
+    if (uniqueId.isEmpty) return;
 
-  // Profile info
-  String _doctorName = 'Dr. Sarah Lee';
-  String _specialization = 'Cardiologist';
-  String _email = 'sarah.lee@example.com';
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('patients')
+          .where('uniqueId', isEqualTo: uniqueId)
+          .get();
 
-  // Controller for the search bar
-  TextEditingController _searchController = TextEditingController();
-
-  // Show profile details
-  void _showProfileDetails() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Profile Details'),
-        content: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Name: $_doctorName'),
-            Text('Specialization: $_specialization'),
-            Text('Email: $_email'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              // Logout action (close the dialog)
-              Navigator.pop(context);
-            },
-            child: Text('Logout'),
-          ),
-        ],
-      ),
-    );
+      if (querySnapshot.docs.isNotEmpty) {
+        setState(() {
+          _patientData = querySnapshot.docs.first.data();
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No patient found with this ID')),
+        );
+        setState(() {
+          _patientData = null;
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error searching for patient: $e')),
+      );
+    }
   }
 
-  // Filter patients based on the search query
-  List<Map<String, String>> _getFilteredPatients() {
-    if (_searchQuery.isEmpty) {
-      return _recentPatients;
-    } else {
-      return _recentPatients
-          .where((patient) =>
-              patient['name']!.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              patient['id']!.toLowerCase().contains(_searchQuery.toLowerCase()))
-          .toList();
+  Future<void> _logout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Confirm Logout'),
+          content: const Text('Are you sure you want to log out?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await FirebaseAuth.instance.signOut();
+      Navigator.of(context).pushReplacementNamed('/login');
     }
   }
 
@@ -88,11 +71,13 @@ class _DoctorHomePageState extends State<DoctorHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Doctor Dashboard'),
+        title: const Text('Doctor Dashboard'),
+        backgroundColor: Colors.blue.shade800,
+        elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(Icons.account_circle),
-            onPressed: _showProfileDetails,
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: _logout,
           ),
         ],
       ),
@@ -104,40 +89,91 @@ class _DoctorHomePageState extends State<DoctorHomePage> {
             // Search Bar
             TextField(
               controller: _searchController,
-              onChanged: (query) {
-                setState(() {
-                  _searchQuery = query;
-                });
-              },
               decoration: InputDecoration(
-                labelText: 'Search Patients',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
+                labelText: 'Search Patients by Unique ID',
+                labelStyle: TextStyle(color: Colors.blue.shade800),
+                prefixIcon: Icon(Icons.search, color: Colors.blue.shade800),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: Colors.blue.shade800),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: Colors.blue.shade800, width: 2),
+                ),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() {
+                      _patientData = null;
+                    });
+                  },
+                ),
               ),
+              onSubmitted: (value) => _searchPatient(),
             ),
-            SizedBox(height: 16),
-            // Recent Consulted Patients List
-            Text(
-              'Recent Consulted Patients',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 10),
-            // Patients List (Table View)
-            Expanded(
-              child: ListView(
-                children: _getFilteredPatients().map((patient) {
-                  return Card(
-                    margin: EdgeInsets.symmetric(vertical: 5),
-                    child: ListTile(
-                      title: Text(patient['name']!),
-                      subtitle: Text('ID: ${patient['id']}'),
-                    ),
-                  );
-                }).toList(),
+            const SizedBox(height: 20),
+            if (_patientData != null)
+              Card(
+                elevation: 5,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Patient Details',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade800,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      _buildDetailRow('Name', _patientData!['name']),
+                      _buildDetailRow('Age', _patientData!['age']),
+                      _buildDetailRow('Gender', _patientData!['gender']),
+                      _buildDetailRow('Email', _patientData!['email']),
+                      _buildDetailRow('Phone', _patientData!['phone']),
+                      _buildDetailRow('Unique ID', _patientData!['uniqueId']),
+                    ],
+                  ),
+                ),
               ),
-            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$label: ',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

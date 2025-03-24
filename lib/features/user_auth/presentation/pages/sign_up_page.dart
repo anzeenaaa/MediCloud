@@ -1,198 +1,104 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:medicloud/features/user_auth/firebase_auth_implementation/firebase_auth_services.dart';
-import 'package:medicloud/features/user_auth/presentation/pages/login_page.dart';
-import 'package:medicloud/features/user_auth/presentation/widgets/form_container_widget.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 class SignUpPage extends StatefulWidget {
-  final bool isDoctor;
-
   const SignUpPage({super.key, required this.isDoctor});
+
+  final bool isDoctor; // Store whether user is a doctor or patient
 
   @override
   State<SignUpPage> createState() => _SignUpPageState();
 }
 
 class _SignUpPageState extends State<SignUpPage> {
-  final FirebaseAuthService _auth = FirebaseAuthService();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Controllers for patient fields
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _ageController = TextEditingController();
-  final TextEditingController _genderController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
 
-  // Controllers for doctor fields
-  final TextEditingController _registrationController = TextEditingController();
-  final TextEditingController _specializationController = TextEditingController();
-  final TextEditingController _experienceController = TextEditingController();
-  final TextEditingController _clinicNameController = TextEditingController();
-
   bool isSigningUp = false;
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _ageController.dispose();
-    _genderController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    _phoneController.dispose();
-    _registrationController.dispose();
-    _specializationController.dispose();
-    _experienceController.dispose();
-    _clinicNameController.dispose();
-    super.dispose();
-  }
+  String selectedRole = "patient"; // Default role is patient
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: Text(widget.isDoctor ? "Doctor Signup" : "Patient Signup"),
+        title: const Text("Signup"),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context); // ✅ Go back to login page
+          },
+        ),
       ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 15),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                widget.isDoctor ? "Doctor Signup" : "Patient Signup",
-                style: const TextStyle(fontSize: 27, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 30),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: "Full Name"),
+            ),
+            TextField(
+              controller: _emailController,
+              decoration: const InputDecoration(labelText: "Email"),
+            ),
+            TextField(
+              controller: _passwordController,
+              decoration: const InputDecoration(labelText: "Password"),
+              obscureText: true,
+            ),
+            TextField(
+              controller: _phoneController,
+              decoration: const InputDecoration(labelText: "Phone Number"),
+            ),
 
-              // Dynamic form fields
-              if (!widget.isDoctor) ...[
-                // Patient fields
-                FormContainerWidget(
-                  controller: _nameController,
-                  hintText: "Name",
-                  isPasswordField: false,
-                ),
-                const SizedBox(height: 10),
-                FormContainerWidget(
-                  controller: _ageController,
-                  hintText: "Age",
-                  isPasswordField: false,
-                ),
-                const SizedBox(height: 10),
-                FormContainerWidget(
-                  controller: _genderController,
-                  hintText: "Gender (Male/Female/Other)",
-                  isPasswordField: false,
-                ),
-                const SizedBox(height: 10),
-              ] else ...[
-                // Doctor fields
-                FormContainerWidget(
-                  controller: _nameController,
-                  hintText: "Name",
-                  isPasswordField: false,
-                ),
-                const SizedBox(height: 10),
-                FormContainerWidget(
-                  controller: _registrationController,
-                  hintText: "Doctor Registration Number",
-                  isPasswordField: false,
-                ),
-                const SizedBox(height: 10),
-                FormContainerWidget(
-                  controller: _specializationController,
-                  hintText: "Specialization",
-                  isPasswordField: false,
-                ),
-                const SizedBox(height: 10),
-                FormContainerWidget(
-                  controller: _experienceController,
-                  hintText: "Years of Experience",
-                  isPasswordField: false,
-                ),
-                const SizedBox(height: 10),
-                FormContainerWidget(
-                  controller: _clinicNameController,
-                  hintText: "Clinic/Hospital Name",
-                  isPasswordField: false,
-                ),
-                const SizedBox(height: 10),
-              ],
-
-              // Common fields
-              FormContainerWidget(
-                controller: _emailController,
-                hintText: "Email",
-                isPasswordField: false,
-              ),
-              const SizedBox(height: 10),
-              FormContainerWidget(
-                controller: _passwordController,
-                hintText: "Password",
-                isPasswordField: true,
-              ),
-              const SizedBox(height: 10),
-              FormContainerWidget(
-                controller: _phoneController,
-                hintText: "Phone Number (Optional)",
-                isPasswordField: false,
-              ),
-              const SizedBox(height: 30),
-
-              // Signup Button
-              GestureDetector(
-                onTap: _signUp,
-                child: Container(
-                  width: double.infinity,
-                  height: 45,
-                  decoration: BoxDecoration(
-                    color: Colors.blue,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Center(
-                    child: isSigningUp
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                            "Sign Up",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Redirect to login
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("Already have an account?"),
-                  const SizedBox(width: 5),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(builder: (context) => const LoginPage()),
-                        (route) => false,
-                      );
-                    },
-                    child: const Text(
-                      "Login",
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontWeight: FontWeight.bold,
-                      ),
+            // Role selection dropdown
+            DropdownButton<String>(
+              value: selectedRole,
+              onChanged: (String? newValue) {
+                setState(() {
+                  selectedRole = newValue!;
+                });
+              },
+              items: <String>["patient", "doctor"]
+                  .map<DropdownMenuItem<String>>(
+                    (String value) => DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value.toUpperCase()),
                     ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                  )
+                  .toList(),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Sign Up Button
+            ElevatedButton(
+              onPressed: _signUp,
+              child: isSigningUp
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text("Sign Up"),
+            ),
+            
+            const SizedBox(height: 10),
+            // Navigate back to Login Button
+            TextButton(
+              onPressed: () {
+                Navigator.pushNamedAndRemoveUntil(
+                  context, 
+                  "/login", 
+                  (route) => false, // Remove all previous routes
+                );
+              },
+              child: const Text("Back to Login"),
+            ),
+          ],
         ),
       ),
     );
@@ -203,50 +109,51 @@ class _SignUpPageState extends State<SignUpPage> {
       isSigningUp = true;
     });
 
-    String email = _emailController.text.trim();
-    String password = _passwordController.text.trim();
-
     try {
-      // Register user with email and password
-      User? user = await _auth.registerWithEmailAndPassword(email, password);
+      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
 
+      User? user = userCredential.user;
       if (user != null) {
-        if (!mounted) return;
+        Map<String, dynamic> userData = {
+          "uid": user.uid,
+          "name": _nameController.text.trim(),
+          "email": _emailController.text.trim(),
+          "phone": _phoneController.text.trim(),
+          "role": selectedRole,
+        };
 
-        setState(() {
-          isSigningUp = false;
-        });
+        // Store data in Firestore
+        if (selectedRole == "doctor") {
+          await _firestore.collection("doctors").doc(user.uid).set(userData);
+        } else {
+          userData.addAll({"uniqueId": null, "age": null, "gender": null});
+          await _firestore.collection("patients").doc(user.uid).set(userData);
+        }
 
-        showToast(message: "User successfully registered");
+        showToast("Signup successful! Redirecting to login...");
 
-        // Navigate based on doctor or patient role
-        Navigator.pushNamed(
-          context,
-          widget.isDoctor ? "/doctorHome" : "/patientHome",
-        );
-      } else {
-        // Registration failed
-        setState(() {
-          isSigningUp = false;
-        });
+        // ✅ Navigate back to login page
+        if (mounted) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            "/login",
+            (route) => false, // Remove all previous routes
+          );
+        }
       }
     } catch (e) {
-      setState(() {
-        isSigningUp = false;
-      });
-      showToast(message: "Some error occurred: ${e.toString()}");
+      showToast("Signup failed: \${e.toString()}");
     }
+
+    setState(() {
+      isSigningUp = false;
+    });
   }
 }
 
-void showToast({required String message}) {
-  Fluttertoast.showToast(
-    msg: message,
-    toastLength: Toast.LENGTH_SHORT,
-    gravity: ToastGravity.BOTTOM,
-    timeInSecForIosWeb: 1,
-    backgroundColor: Colors.black,
-    textColor: Colors.white,
-    fontSize: 16.0,
-  );
+void showToast(String message) {
+  Fluttertoast.showToast(msg: message, backgroundColor: Colors.black);
 }

@@ -1,9 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:medicloud/features/user_auth/presentation/pages/sign_up_page.dart'; // No prefix
+import 'package:medicloud/features/user_auth/presentation/pages/sign_up_page.dart'; 
 import 'package:medicloud/features/user_auth/presentation/widgets/form_container_widget.dart';
-import 'package:medicloud/global/common/toast.dart' as toast;  // Prefix for 'toast.dart'
-
+import 'package:medicloud/global/common/toast.dart' as toast;  
 import '../../firebase_auth_implementation/firebase_auth_services.dart';
 
 class LoginPage extends StatefulWidget {
@@ -20,7 +19,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  bool isDoctor = false;
+  bool isDoctor = false;  // ✅ Define `isDoctor` here
 
   @override
   void dispose() {
@@ -98,7 +97,7 @@ class _LoginPageState extends State<LoginPage> {
               // Sign in button
               GestureDetector(
                 onTap: () {
-                  _signIn(context); // Pass context explicitly
+                  _signIn(context);
                 },
                 child: Container(
                   width: double.infinity,
@@ -133,7 +132,7 @@ class _LoginPageState extends State<LoginPage> {
                       Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => SignUpPage(isDoctor: isDoctor),
+                          builder: (context) => SignUpPage(isDoctor: isDoctor), // ✅ Fixed here
                         ),
                         (route) => false,
                       );
@@ -167,7 +166,7 @@ class _LoginPageState extends State<LoginPage> {
     try {
       User? user = await _auth.signInWithEmailAndPassword(email, password);
 
-      if (!mounted) return;  // Ensure the widget is still in the tree before updating state
+      if (!mounted) return;
 
       setState(() {
         _isSigning = false;
@@ -176,8 +175,8 @@ class _LoginPageState extends State<LoginPage> {
       if (user != null) {
         // Show success message and navigate based on the role
         toast.showToast(
-          message: "Login successful",  // The actual message to display in the toast
-          duration: Duration(seconds: 2),  // Duration for how long the toast will show
+          message: "Login successful",
+          duration: Duration(seconds: 2),
         );
 
         if (mounted) {
@@ -187,10 +186,9 @@ class _LoginPageState extends State<LoginPage> {
           );
         }
       } else {
-        // Handle case where login fails
         if (mounted) {
           toast.showToast(
-            message: "Login failed", 
+            message: "Login failed",
             duration: Duration(seconds: 2),
           );
         }

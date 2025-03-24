@@ -1,297 +1,306 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:logger/logger.dart';
+import '../pages/../../functions/disease_prediction_service.dart';
+import '../pages/../../functions/report_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:medicloud/features/user_auth/presentation/pages/profile_page.dart';
+import 'package:medicloud/features/user_auth/presentation/pages/report_page.dart';
 
 void main() {
   runApp(MyApp());
 }
 
-final Logger logger = Logger(); // Initialize logger
+final Logger logger = Logger();
 
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Patient Homepage',
+      title: 'MediCloud Patient',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        scaffoldBackgroundColor: Colors.white,
+        colorScheme: ColorScheme.light(
+          primary: Colors.blue.shade800,
+        ),
+        textTheme: const TextTheme(
+          bodyLarge: TextStyle(fontSize: 18, color: Colors.black87),
+          bodyMedium: TextStyle(fontSize: 16, color: Colors.black54),
+        ),
       ),
-      home: PatHomePage(),
+      home: const PatHomePage(userName: 'User'),
     );
   }
 }
 
 class PatHomePage extends StatefulWidget {
-  const PatHomePage({super.key});
+  final String userName;
+  const PatHomePage({super.key, required this.userName});
 
   @override
-  _HomePageState createState() => _HomePageState();
+  _PatHomePageState createState() => _PatHomePageState();
 }
 
-class _HomePageState extends State<PatHomePage> {
-  // ignore: unused_field
+class _PatHomePageState extends State<PatHomePage> {
   int _currentIndex = 0;
   TextEditingController _symptomController = TextEditingController();
+  String _predictedDisease = "";
+  String _imagePrediction = "";
+  String? _selectedImagePath;
+  String _generatedReport = "";
 
-  void _onPageChanged(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
+  void _onTabTapped(int index) {
+    if (index == 1) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ProfilePage(userName: widget.userName),
+        ),
+      );
+    } else {
+      setState(() {
+        _currentIndex = index;
+      });
+    }
   }
 
   Future<void> _pickFile() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'jpg', 'png'],
-      );
+      final result = await FilePicker.platform.pickFiles(type: FileType.image);
       if (result != null) {
-        logger.i('File selected: ${result.files.single.name}');
-      } else {
-        logger.w('File selection canceled.');
+        setState(() {
+          _selectedImagePath = result.files.single.path!;
+        });
       }
     } catch (e) {
       logger.e('Error picking file: $e');
     }
   }
 
-  void _addSymptom(String symptom) {
+  Future<void> _predictDiseaseFromText() async {
+    final String result = await predictDisease(_symptomController.text);
     setState(() {
-      if (!_symptomController.text.contains(symptom)) {
-        _symptomController.text += '$symptom, ';
+      _predictedDisease = result;
+    });
+    _storePrediction(result);
+    _generateReportIfReady();
+  }
+
+  Future<void> _predictDiseaseFromImage() async {
+  if (_selectedImagePath == null) {
+    setState(() {
+      _imagePrediction = "No image selected.";
+    });
+    return;
+  }
+
+  try {
+    logger.i("Sending image for prediction: $_selectedImagePath"); // ✅ Log file path
+
+    List<String> predictedDiseases = await predictDiseaseFromImage(_selectedImagePath!);
+
+    setState(() {
+      if (predictedDiseases.isNotEmpty) {
+        _imagePrediction = "Predicted Conditions:\n• " + predictedDiseases.join("\n• ");
+      } else {
+        _imagePrediction = "No disease detected.";
       }
     });
-    logger.d('Added symptom: $symptom');
+
+    _generateReportIfReady(); // ✅ Call report generation after prediction
+  } catch (e, stacktrace) {
+    logger.e("Error predicting from image: $e\n$stacktrace"); // ✅ Log error details
+    setState(() {
+      _imagePrediction = "Error: Unable to process image. Please try again.";
+    });
+  }
+}
+Future<void> _generateReportIfReady() async {
+  if (_predictedDisease.isEmpty && _imagePrediction.isEmpty) {
+    logger.w("No predictions available. Cannot generate report.");
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("No predictions available to generate a report.")),
+    );
+    return;
   }
 
-  Widget _buildCard({
-    required String title,
-    required String description,
-    required String backgroundImage,
-    required VoidCallback onPressed,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Column(
-          children: [
-            Container(
-              height: 150,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
-                ),
-                image: DecorationImage(
-                  image: AssetImage(backgroundImage),
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    description,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.black54,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: ElevatedButton(
-                      onPressed: onPressed,
-                      child: const Text('Explore'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  Map<String, int> detectedConditions = {};
+  List<String> possibleDiseases = [
+    "No Finding", "Enlarged Cardiomediastinum", "Cardiomegaly", "Lung Opacity",
+    "Lung Lesion", "Edema", "Consolidation", "Pneumonia", "Atelectasis",
+    "Pneumothorax", "Pleural Effusion", "Pleural Other", "Fracture", "Support Devices"
+  ];
+
+  for (var disease in possibleDiseases) {
+    if (_imagePrediction.contains(disease)) {
+      detectedConditions[disease] = 1;
+    }
   }
 
-  Widget _buildProfileSection() {
-    return Container(
-      color: const Color.fromARGB(255, 250, 250, 251),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircleAvatar(
-              radius: 50,
-              backgroundImage: AssetImage('assets/profile.jpg'),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'John Doe',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'johndoe@example.com',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.black54,
-              ),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'Phone: +1 234 567 8901',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.black54,
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => logger.i('Edit Profile button pressed'),
-              child: const Text('Edit Profile'),
-            ),
-          ],
-        ),
+  final Map<String, dynamic> xrayPrediction = {"predicted_diseases": detectedConditions};
+
+  logger.i("Generating report for: Symptoms - $_predictedDisease, X-ray - ${xrayPrediction.toString()}");
+
+  String? report = await ReportService.generateReport(_predictedDisease, xrayPrediction);
+
+  if (report != null) {
+    logger.i("Report successfully generated.");
+    setState(() {
+      _generatedReport = report;
+    });
+
+    // Navigate to the new report page and pass the generated report
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ReportPage(reportText: _generatedReport),
       ),
     );
+  } else {
+    logger.e("Report generation failed.");
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Report generation failed. Please try again.")),
+    );
+  }
+}
+
+
+  Future<void> _storePrediction(String result) async {
+    await FirebaseFirestore.instance.collection('patients').doc(widget.userName).set({
+      'latestPrediction': result,
+      'timestamp': DateTime.now(),
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('MEDICLOUD'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        title: const Text('Patient Health Checkup'),
+        backgroundColor: Colors.blue.shade800,
+        elevation: 0,
       ),
-      body: Column(
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const SizedBox(height: 20),
+            _buildPredictionPage(),
+          ],
+        ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: _onTabTapped,
+        selectedItemColor: Colors.blue.shade800,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.medical_services), label: 'Checkup'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPredictionPage() {
+    return Expanded(
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildSectionTitle('Describe Your Symptoms'),
+            TextField(
+              controller: _symptomController,
+              decoration: InputDecoration(
+                hintText: 'Enter symptoms...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                filled: true,
+                fillColor: Colors.grey[200],
+              ),
+              maxLines: 3,
+            ),
+            const SizedBox(height: 15),
+            _buildActionButton('Predict from Symptoms', _predictDiseaseFromText),
+            if (_predictedDisease.isNotEmpty)
+              _buildPredictionCard('Predicted Disease:', _predictedDisease),
+            const SizedBox(height: 20),
+            _buildSectionTitle('Upload X-ray'),
+            _buildActionButton('Upload Image', _pickFile),
+            if (_selectedImagePath != null)
+              Text(
+                'Selected file: ${_selectedImagePath!.split('/').last}',
+                style: const TextStyle(fontSize: 16),
+              ),
+            if (_selectedImagePath != null)
+              _buildActionButton('Analyze and get Report', _predictDiseaseFromImage),
+            if (_imagePrediction.isNotEmpty)
+              _buildPredictionCard('X-ray Analysis:', _imagePrediction),
+
+            // New Button for Generating Full Report
+           // const SizedBox(height: 20),
+            //buildActionButton('Generate Full Report', _generateReportIfReady),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Column(
+      children: [
+        const SizedBox(height: 10),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.blue.shade800,
+          ),
+        ),
+        const SizedBox(height: 10),
+      ],
+    );
+  }
+
+  Widget _buildActionButton(String text, VoidCallback onPressed) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        backgroundColor: Colors.blue.shade800,
+        foregroundColor: Colors.white,
+      ),
+      onPressed: onPressed,
+      child: Text(text),
+    );
+  }
+
+  Widget _buildPredictionCard(String title, String prediction) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: const Color.fromARGB(255, 250, 250, 251),
-            child: const Row(
-              children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundImage: AssetImage('assets/avatar.jpg'),
-                ),
-                SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'John Doe',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    SizedBox(height: 5),
-                    Text(
-                      'Active now',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.black54,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.blue.shade800,
             ),
           ),
-          Expanded(
-            child: PageView(
-              onPageChanged: _onPageChanged,
-              children: [
-                SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      _buildCard(
-                        title: 'Health Insights',
-                        description: 'Get AI-powered insights about your health.',
-                        backgroundImage: 'assets/insight.jpg',
-                        onPressed: () => logger.i('Health Insights pressed'),
-                      ),
-                      _buildCard(
-                        title: 'Recent Records',
-                        description: 'View your most recent health records.',
-                        backgroundImage: 'assets/recent.jpg',
-                        onPressed: () => logger.i('Recent Records pressed'),
-                      ),
-                      _buildCard(
-                        title: 'Diet Suggestions',
-                        description: 'Receive personalized diet recommendations.',
-                        backgroundImage: 'assets/diet.jpg',
-                        onPressed: () => logger.i('Diet Suggestions pressed'),
-                      ),
-                    ],
-                  ),
-                ),
-                SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Logbook',
-                        style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 20),
-                      const Text('Enter Your Symptoms', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: _symptomController,
-                        decoration: InputDecoration(
-                          hintText: 'Describe your symptoms...',
-                          border: OutlineInputBorder(),
-                          filled: true,
-                        ),
-                        maxLines: 3,
-                      ),
-                      const SizedBox(height: 20),
-                      const Text('Common Symptoms', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          ElevatedButton(onPressed: () => _addSymptom('Cough'), child: const Text('Cough')),
-                          ElevatedButton(onPressed: () => _addSymptom('Cold'), child: const Text('Cold')),
-                          ElevatedButton(onPressed: () => _addSymptom('Headache'), child: const Text('Headache')),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      const Text('Upload Medical Reports', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      ElevatedButton.icon(
-                        onPressed: _pickFile,
-                        icon: const Icon(Icons.upload_file),
-                        label: const Text('Choose File'),
-                      ),
-                    ],
-                  ),
-                ),
-                _buildProfileSection(),
-              ],
-            ),
+          const SizedBox(height: 5),
+          Text(
+            prediction,
+            style: const TextStyle(fontSize: 16, color: Colors.black87),
           ),
         ],
       ),
